@@ -23,10 +23,30 @@ app.get("/", (req, res) => {
   res.send("🚀 Xpress Inn Feedback API is running!");
 });
 
-// ✅ MongoDB connection
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log("✅ Database connected successfully"))
-  .catch((error) => console.log("❌ Database connection error:", error));
+// ✅ MongoDB connection with better error handling
+const connectDB = async () => {
+  try {
+    const options = {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    };
+
+    await mongoose.connect(process.env.MONGODB_URI, options);
+    console.log("✅ Database connected successfully");
+  } catch (error) {
+    console.error("❌ Database connection error:", error.message);
+    console.log("\n🔍 Troubleshooting tips:");
+    console.log("1. Check your internet connection");
+    console.log("2. Verify MongoDB Atlas credentials");
+    console.log("3. Check if IP is whitelisted in MongoDB Atlas");
+    console.log("4. Try using local MongoDB: mongodb://localhost:27017/xpress-inn-feedback");
+    console.log("\n⚠️  Server will continue running without database...\n");
+  }
+};
+
+connectDB();
 
 // ✅ Routes
 app.use('/api', feedbackRoutes);

@@ -26,25 +26,48 @@ npm install
 ```
 
 3. Configure environment variables:
-Create a `.env` file in the root directory and add:
+Create a `.env` file in the root directory:
 ```env
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/xpress-inn-feedback
+MONGODB_URI=mongodb://localhost:27017/skk
 
 # Email Configuration
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
-BUSINESS_EMAIL=xpressinn@example.com
+EMAIL_USER=xpressinnmarshall@gmail.com
+EMAIL_PASS=zkbw virh mpkw tyrw
+EMAIL_PORT=587
+EMAIL_FROM=xpressinnmarshall@gmail.com
+BUSINESS_EMAIL=xpressinnmarshall@gmail.com
 
 # Frontend URL
 FRONTEND_URL=http://localhost:3000
 ```
 
-4. Start MongoDB (make sure MongoDB is installed and running)
+4. **Setup MongoDB Locally:**
+
+   **Option 1: MongoDB Compass (Recommended - Easiest)**
+   - Download: https://www.mongodb.com/try/download/compass
+   - Install and open MongoDB Compass
+   - Connect using: `mongodb://localhost:27017`
+   - Database `skk` will be created automatically
+
+   **Option 2: MongoDB Community Server**
+   - Download: https://www.mongodb.com/try/download/community
+   - Install MongoDB
+   - Start MongoDB service:
+     ```bash
+     # Windows
+     net start MongoDB
+     
+     # Mac
+     brew services start mongodb-community
+     
+     # Linux
+     sudo systemctl start mongod
+     ```
 
 5. Run the server:
 ```bash
-# Development mode
+# Development mode (with auto-reload)
 npm run dev
 
 # Production mode
@@ -53,7 +76,12 @@ npm start
 
 ## 🔌 API Endpoints
 
-### Create Feedback
+### Base URL
+```
+http://localhost:5000
+```
+
+### 1. Create Feedback
 ```http
 POST /api/feedback
 Content-Type: application/json
@@ -68,17 +96,37 @@ Content-Type: application/json
 }
 ```
 
-### Get All Feedbacks
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Feedback submitted successfully",
+  "data": {
+    "_id": "...",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "contact": "1234567890",
+    "message": "Great experience!",
+    "rating": 5,
+    "feedbackType": "happy",
+    "status": "pending",
+    "createdAt": "2024-02-13T...",
+    "updatedAt": "2024-02-13T..."
+  }
+}
+```
+
+### 2. Get All Feedbacks
 ```http
 GET /api/feedbacks
 ```
 
-### Get Single Feedback
+### 3. Get Single Feedback
 ```http
 GET /api/feedback/:id
 ```
 
-### Update Feedback Status
+### 4. Update Feedback Status
 ```http
 PUT /api/feedback/:id/status
 Content-Type: application/json
@@ -88,19 +136,21 @@ Content-Type: application/json
 }
 ```
 
-### Delete Feedback
+### 5. Delete Feedback
 ```http
 DELETE /api/feedback/:id
 ```
 
 ## 📧 Email Configuration
 
-To enable email notifications:
+Gmail App Password setup:
 
-1. Use a Gmail account
-2. Enable 2-factor authentication
-3. Generate an App Password: https://myaccount.google.com/apppasswords
-4. Add credentials to `.env` file
+1. Go to Google Account: https://myaccount.google.com
+2. Security → 2-Step Verification (enable it)
+3. Security → App passwords
+4. Generate new app password for "Mail"
+5. Copy the 16-character password
+6. Add to `.env` file (with spaces): `zkbw virh mpkw tyrw`
 
 ## 🗂️ Project Structure
 
@@ -108,15 +158,15 @@ To enable email notifications:
 qr-p-backend/
 ├── src/
 │   ├── Controller/
-│   │   └── feedback.Controllers.js
+│   │   └── feedback.Controllers.js    # Business logic
 │   ├── Models/
-│   │   └── feedback.Models.js
+│   │   └── feedback.Models.js         # Database schema
 │   ├── Routes/
-│   │   └── feedback.Routes.js
+│   │   └── feedback.Routes.js         # API routes
 │   ├── utils/
-│   │   └── mailer.js
-│   └── server.js
-├── .env
+│   │   └── mailer.js                  # Email utility
+│   └── server.js                      # Main server file
+├── .env                               # Environment variables
 ├── .gitignore
 ├── package.json
 └── README.md
@@ -124,40 +174,113 @@ qr-p-backend/
 
 ## 🔗 Frontend Integration
 
-Update your frontend `PrivateFeedback.jsx` to connect with this API:
+Update your frontend `PrivateFeedback.jsx`:
 
 ```javascript
 const handleSubmit = async () => {
+  // Validation
+  if (!formData.name.trim()) {
+    alert('Please enter your name');
+    return;
+  }
+  if (!formData.email.trim()) {
+    alert('Please enter your email');
+    return;
+  }
+  if (!formData.contact.trim()) {
+    alert('Please enter your contact number');
+    return;
+  }
+  if (!formData.message.trim()) {
+    alert('Please enter your message');
+    return;
+  }
+
   try {
     const response = await fetch('http://localhost:5000/api/feedback', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(formData)
+      body: JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        contact: formData.contact,
+        message: formData.message,
+        rating: formData.rating || 0,
+        feedbackType: 'sad'
+      })
     });
 
     const data = await response.json();
     
     if (data.success) {
-      alert('Thank you for your feedback!');
+      alert('Thank you for your feedback! We will work on improving.');
       navigate('/thank-you');
+    } else {
+      alert('Failed to submit feedback. Please try again.');
     }
   } catch (error) {
     console.error('Error:', error);
-    alert('Failed to submit feedback');
+    alert('Network error. Please check your connection.');
   }
 };
 ```
 
 ## 🛠️ Technologies Used
 
-- Node.js
-- Express.js
-- MongoDB & Mongoose
-- Nodemailer
-- CORS
-- dotenv
+- **Node.js** - Runtime environment
+- **Express.js** - Web framework
+- **MongoDB** - Database
+- **Mongoose** - ODM for MongoDB
+- **Nodemailer** - Email sending
+- **CORS** - Cross-origin resource sharing
+- **dotenv** - Environment variables
+
+## 🧪 Testing
+
+Test the API using:
+- **Postman**: Import endpoints and test
+- **Thunder Client** (VS Code extension)
+- **cURL**:
+```bash
+curl -X POST http://localhost:5000/api/feedback \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test User",
+    "email": "test@example.com",
+    "contact": "1234567890",
+    "message": "Test feedback",
+    "rating": 5,
+    "feedbackType": "happy"
+  }'
+```
+
+## 🐛 Troubleshooting
+
+### MongoDB Connection Issues
+```bash
+# Check if MongoDB is running
+# Windows
+net start MongoDB
+
+# Mac
+brew services list
+
+# Linux
+sudo systemctl status mongod
+```
+
+### Email Not Sending
+- Verify Gmail App Password is correct
+- Check if 2-Step Verification is enabled
+- Remove spaces from password in code (keep in .env with spaces)
+
+### Port Already in Use
+```bash
+# Change PORT in .env file
+PORT=5001
+```
 
 ## 📝 License
 
@@ -169,4 +292,7 @@ Aryan Kaushik
 
 ---
 
-**Xpress Inn Marshall** - 300 I-20, Marshall, TX | +1 923-471-8277
+**Xpress Inn Marshall**  
+📍 300 I-20, Marshall, TX  
+📞 +1 923-471-8277  
+🌐 https://xpressinnmarshall.com

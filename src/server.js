@@ -23,18 +23,12 @@ app.get("/", (req, res) => {
   res.send("🚀 Xpress Inn Feedback API is running!");
 });
 
-// ✅ MongoDB connection with better error handling
+// ✅ MongoDB connection
 const connectDB = async () => {
   try {
-    const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    };
-
-    await mongoose.connect(process.env.MONGODB_URI, options);
+    await mongoose.connect(process.env.MONGODB_URI);
     console.log("✅ Database connected successfully");
+    console.log(`📊 Database: ${mongoose.connection.name}`);
   } catch (error) {
     console.error("❌ Database connection error:", error.message);
     console.log("\n🔍 Troubleshooting tips:");

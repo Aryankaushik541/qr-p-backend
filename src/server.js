@@ -95,10 +95,13 @@ app.use((req, res) => {
 });
 
 // ✅ Server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`\n🚀 Server started successfully!`);
-  console.log(`📍 Server running on: http://localhost:${PORT}`);
-  console.log(`📧 Email configured: ${process.env.EMAIL_USER}`);
-  console.log(`🗄️  Database: ${process.env.MONGODB_URI}\n`);
-});
+// const PORT = process.env.PORT || 5000;
+// app.listen(PORT, () => {
+//   console.log(`\n🚀 Server started successfully!`);
+//   console.log(`📍 Server running on: http://localhost:${PORT}`);
+//   console.log(`📧 Email configured: ${process.env.EMAIL_USER}`);
+//   console.log(`🗄️  Database: ${process.env.MONGODB_URI}\n`);
+// });
+
+module.exports = app;
+

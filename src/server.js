@@ -7,28 +7,12 @@ const feedbackRoutes = require('./Routes/feedback.Routes');
 const app = express();
 
 // ✅ CORS - Frontend ke liye specific
-const allowedOrigins = [
-  "http://localhost:3000",              // Local React dev
-  "https://warm-donut.vercel.app"       // Production frontend
-];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (Postman, server-to-server)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // ✅ Other Middlewares
 app.use(express.json());
@@ -95,13 +79,10 @@ app.use((req, res) => {
 });
 
 // ✅ Server
-// const PORT = process.env.PORT || 5000;
-// app.listen(PORT, () => {
-//   console.log(`\n🚀 Server started successfully!`);
-//   console.log(`📍 Server running on: http://localhost:${PORT}`);
-//   console.log(`📧 Email configured: ${process.env.EMAIL_USER}`);
-//   console.log(`🗄️  Database: ${process.env.MONGODB_URI}\n`);
-// });
-
-module.exports = app;
-
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`\n🚀 Server started successfully!`);
+  console.log(`📍 Server running on: http://localhost:${PORT}`);
+  console.log(`📧 Email configured: ${process.env.EMAIL_USER}`);
+  console.log(`🗄️  Database: ${process.env.MONGODB_URI}\n`);
+});

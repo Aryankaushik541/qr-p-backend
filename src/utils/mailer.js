@@ -1,40 +1,31 @@
 const nodemailer = require("nodemailer");
 
 /* ======================================================
-   ✅ SINGLE GLOBAL TRANSPORTER (NO POOL FOR SERVERLESS)
-====================================================== */
-
-let transporter;
-
-function getTransporter() {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true, // use SSL directly (more stable than STARTTLS 587)
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000
-    });
-  }
-  return transporter;
-}
-
-/* ======================================================
-   ✅ SEND MAIL FUNCTION
+   ✅ SEND MAIL FUNCTION (Fresh Connection Each Time)
 ====================================================== */
 
 exports.sendMail = async ({ to, subject, text, html }) => {
   if (!to) throw new Error("Recipient email is required");
 
   try {
-    const mailer = getTransporter();
+    // ⚠️ Create transporter inside function (serverless safe)
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false, // STARTTLS
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      },
+      tls: {
+        rejectUnauthorized: false
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000
+    });
 
-    const info = await mailer.sendMail({
+    const info = await transporter.sendMail({
       from: `"Xpress Inn Marshall" <${process.env.EMAIL_USER}>`,
       to,
       subject,
@@ -42,11 +33,11 @@ exports.sendMail = async ({ to, subject, text, html }) => {
       html
     });
 
-    console.log("✅ Email sent:", info.messageId);
+    console.log("✅ Email sent:", info.response);
     return info;
 
   } catch (error) {
-    console.error("❌ Email sending failed:", error.message);
+    console.error("❌ Email sending failed:", error);
     throw error;
   }
 };

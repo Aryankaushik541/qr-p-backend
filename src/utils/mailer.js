@@ -1,7 +1,7 @@
 const nodemailer = require("nodemailer");
 
 /* ======================================================
-   ✅ REUSABLE TRANSPORTER (IMPORTANT FOR SERVERLESS)
+   ✅ SINGLE GLOBAL TRANSPORTER (NO POOL FOR SERVERLESS)
 ====================================================== */
 
 let transporter;
@@ -9,27 +9,29 @@ let transporter;
 function getTransporter() {
   if (!transporter) {
     transporter = nodemailer.createTransport({
-      service: "gmail",
-      pool: true,                 // connection pooling
-      maxConnections: 1,
-      maxMessages: 50,
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true, // use SSL directly (more stable than STARTTLS 587)
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-      }
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
     });
   }
   return transporter;
 }
 
 /* ======================================================
-   ✅ SEND MAIL FUNCTION (FAST + SAFE)
+   ✅ SEND MAIL FUNCTION
 ====================================================== */
 
 exports.sendMail = async ({ to, subject, text, html }) => {
-  try {
-    if (!to) throw new Error("Recipient email is required");
+  if (!to) throw new Error("Recipient email is required");
 
+  try {
     const mailer = getTransporter();
 
     const info = await mailer.sendMail({
@@ -40,7 +42,7 @@ exports.sendMail = async ({ to, subject, text, html }) => {
       html
     });
 
-    console.log("✅ Email sent:", info.response);
+    console.log("✅ Email sent:", info.messageId);
     return info;
 
   } catch (error) {

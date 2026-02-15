@@ -1,26 +1,39 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { 
-  createFeedback, 
-  getAllFeedbacks, 
+
+const {
+  createFeedback,
+  getAllFeedbacks,
   getFeedbackById,
   updateFeedbackStatus,
-  deleteFeedback 
-} = require('../Controller/feedback.Controllers');
+  deleteFeedback
+} = require("../Controller/feedback.Controllers");
 
-// ✅ Create new feedback
-router.post('/feedback', createFeedback);
+/* ======================================================
+   ✅ FEEDBACK ROUTES
+====================================================== */
 
-// ✅ Get all feedbacks (admin)
-router.get('/feedbacks', getAllFeedbacks);
+// Create feedback
+router.post("/feedback", createFeedback);
 
-// ✅ Get single feedback by ID
-router.get('/feedback/:id', getFeedbackById);
+// Get all feedbacks (admin)
+router.get("/feedbacks", getAllFeedbacks);
 
-// ✅ Update feedback status
-router.put('/feedback/:id/status', updateFeedbackStatus);
+// Get single feedback
+router.get("/feedback/:id", getFeedbackById);
 
-// ✅ Delete feedback
-router.delete('/feedback/:id', deleteFeedback);
+// Update status
+router.put("/feedback/:id/status", updateFeedbackStatus);
+
+// Delete feedback
+router.delete("/feedback/:id", deleteFeedback);
+
+/* ======================================================
+   ✅ OPTIONAL: HANDLE PREFLIGHT (Extra Safety)
+====================================================== */
+
+router.options("*", (req, res) => {
+  res.sendStatus(200);
+});
 
 module.exports = router;

@@ -1,43 +1,41 @@
 const nodemailer = require("nodemailer");
 
 /* ======================================================
-   ✅ SEND MAIL FUNCTION (Fresh Connection Each Time)
+   ✅ SEND MAIL FUNCTION (Stable Gmail SSL Config)
 ====================================================== */
 
 exports.sendMail = async ({ to, subject, text, html }) => {
   if (!to) throw new Error("Recipient email is required");
 
   try {
-    // ⚠️ Create transporter inside function (serverless safe)
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
-      port: 587,
-      secure: false, // STARTTLS
+      port: 465,
+      secure: true, // 🔥 Use SSL directly (more reliable than 587)
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        pass: process.env.EMAIL_PASS, // Gmail App Password only
       },
-      tls: {
-        rejectUnauthorized: false
-      },
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 20000
+      connectionTimeout: 10000,
+      socketTimeout: 15000,
     });
+
+    // ✅ Optional but recommended verification
+    await transporter.verify();
 
     const info = await transporter.sendMail({
       from: `"Xpress Inn Marshall" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,
-      html
+      html,
     });
 
-    console.log("✅ Email sent:", info.response);
+    console.log("✅ Email sent:", info.messageId);
     return info;
 
   } catch (error) {
-    console.error("❌ Email sending failed:", error);
+    console.error("❌ Email sending failed:", error.message);
     throw error;
   }
 };

@@ -7,21 +7,34 @@ const feedbackRoutes = require("./Routes/feedback.Routes");
 const app = express();
 
 /* ======================================================
-   ✅ CORS CONFIG (PRODUCTION + LOCAL)
+   ✅ ROBUST CORS CONFIG (NO 403 PRELIGHT)
 ====================================================== */
 
-app.use(
-  cors({
-    origin: [
-      "http://localhost:3000",
-      "https://warm-donut.vercel.app"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  })
-);
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://warm-donut.vercel.app"
+];
 
-app.options("*", cors());
+const corsOptions = {
+  origin: function (origin, callback) {
+
+    // Allow Postman / server-to-server
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.log("Blocked by CORS:", origin);
+    return callback(null, false); // DO NOT throw error
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // important
 
 /* ======================================================
    ✅ BODY PARSER
@@ -55,16 +68,15 @@ async function connectDB() {
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(process.env.MONGODB_URI).then((mongoose) => {
-      return mongoose;
-    });
+    cached.promise = mongoose
+      .connect(process.env.MONGODB_URI)
+      .then((mongoose) => mongoose);
   }
 
   cached.conn = await cached.promise;
   return cached.conn;
 }
 
-// Ensure DB connects before handling routes
 app.use(async (req, res, next) => {
   try {
     await connectDB();
@@ -96,7 +108,7 @@ app.use((req, res) => {
 });
 
 /* ======================================================
-   ✅ EXPORT APP (NO app.listen FOR VERCEL)
+   ✅ EXPORT (VERCEL)
 ====================================================== */
 
 module.exports = app;

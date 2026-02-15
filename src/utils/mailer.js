@@ -1,52 +1,46 @@
 const nodemailer = require("nodemailer");
 
 /* ======================================================
-   ✅ CREATE TRANSPORTER (GMAIL - APP PASSWORD REQUIRED)
+   ✅ REUSABLE TRANSPORTER (IMPORTANT FOR SERVERLESS)
 ====================================================== */
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Gmail App Password
-  },
-});
+let transporter;
 
-/* ======================================================
-   ✅ VERIFY TRANSPORTER (ONLY IN DEV)
-====================================================== */
-
-if (process.env.NODE_ENV !== "production") {
-  transporter.verify((error, success) => {
-    if (error) {
-      console.error("❌ Email configuration error:", error.message);
-    } else {
-      console.log("✅ Email server is ready to send messages");
-    }
-  });
+function getTransporter() {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      pool: true,                 // connection pooling
+      maxConnections: 1,
+      maxMessages: 50,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+  }
+  return transporter;
 }
 
 /* ======================================================
-   ✅ SEND MAIL FUNCTION
+   ✅ SEND MAIL FUNCTION (FAST + SAFE)
 ====================================================== */
 
 exports.sendMail = async ({ to, subject, text, html }) => {
   try {
-    if (!to) {
-      throw new Error("Recipient email is required");
-    }
+    if (!to) throw new Error("Recipient email is required");
 
-    const mailOptions = {
+    const mailer = getTransporter();
+
+    const info = await mailer.sendMail({
       from: `"Xpress Inn Marshall" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,
-      html,
-    };
+      html
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log("✅ Email sent:", info.messageId);
+    console.log("✅ Email sent:", info.response);
     return info;
 
   } catch (error) {

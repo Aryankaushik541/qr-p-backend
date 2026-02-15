@@ -16,7 +16,7 @@ const {
 // Create feedback
 router.post("/feedback", createFeedback);
 
-// Get all feedbacks
+// Get all feedbacks (admin)
 router.get("/feedbacks", getAllFeedbacks);
 
 // Get single feedback
@@ -27,5 +27,13 @@ router.put("/feedback/:id/status", updateFeedbackStatus);
 
 // Delete feedback
 router.delete("/feedback/:id", deleteFeedback);
+
+/* ======================================================
+   ✅ OPTIONAL: HANDLE PREFLIGHT (Extra Safety)
+====================================================== */
+
+router.options("*", (req, res) => {
+  res.sendStatus(200);
+});
 
 module.exports = router;

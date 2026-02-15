@@ -1,44 +1,34 @@
 const nodemailer = require("nodemailer");
 
 /* ======================================================
-   ✅ SINGLE REUSABLE TRANSPORTER (SERVERLESS SAFE)
-====================================================== */
-
-let transporter;
-
-function getTransporter() {
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true, // SSL
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      connectionTimeout: 10000,
-      socketTimeout: 15000
-    });
-  }
-  return transporter;
-}
-
-/* ======================================================
-   ✅ SEND MAIL
+   ✅ SEND MAIL FUNCTION (Stable Gmail SSL Config)
 ====================================================== */
 
 exports.sendMail = async ({ to, subject, text, html }) => {
   if (!to) throw new Error("Recipient email is required");
 
   try {
-    const mailer = getTransporter();
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true, // 🔥 Use SSL directly (more reliable than 587)
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS, // Gmail App Password only
+      },
+      connectionTimeout: 10000,
+      socketTimeout: 15000,
+    });
 
-    const info = await mailer.sendMail({
+    // ✅ Optional but recommended verification
+    await transporter.verify();
+
+    const info = await transporter.sendMail({
       from: `"Xpress Inn Marshall" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,
-      html
+      html,
     });
 
     console.log("✅ Email sent:", info.messageId);

@@ -3,68 +3,71 @@ const Feedback = require("../Models/feedback.Models");
 const { sendMail } = require("../utils/mailer");
 
 /* ======================================================
-   ✅ CREATE FEEDBACK (PRODUCTION SAFE)
+   ✅ CREATE FEEDBACK
 ====================================================== */
 
 exports.createFeedback = async (req, res) => {
   try {
     const { name, email, contact, message, rating, feedbackType } = req.body;
 
-    // Basic safety check (extra layer)
-    if (!name || !email || !contact || !message) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required"
-      });
-    }
-
-    // Save to DB first (MOST IMPORTANT)
+    // Create feedback (schema handles validation)
     const feedback = await Feedback.create({
       name,
       email,
       contact,
       message,
-      rating: rating ?? 0,
-      feedbackType: feedbackType ?? "neutral"
+      rating,
+      feedbackType
     });
 
-    // Send emails in background (NON BLOCKING)
-    setImmediate(async () => {
-      try {
-        await Promise.allSettled([
-          sendMail({
-            to: email,
-            subject: "Thank You for Your Feedback - Xpress Inn Marshall",
-            text: `Hello ${name}, thank you for your feedback!`,
-            html: `
-              <h2>Hello ${name}!</h2>
-              <p>We received your message:</p>
-              <blockquote>${message}</blockquote>
-              <p>We’ll review it shortly.</p>
-            `
-          }),
-          sendMail({
-            to: process.env.BUSINESS_EMAIL,
-            subject: `New Feedback from ${name}`,
-            text: `New feedback received`,
-            html: `
-              <h3>New Feedback</h3>
-              <p><b>Name:</b> ${name}</p>
-              <p><b>Email:</b> ${email}</p>
-              <p><b>Contact:</b> ${contact}</p>
-              <p><b>Rating:</b> ${rating ?? "N/A"}</p>
-              <p><b>Type:</b> ${feedbackType ?? "neutral"}</p>
-              <p><b>Message:</b></p>
-              <p>${message}</p>
-            `
-          })
-        ]);
-      } catch (err) {
-        console.error("Background Email Error:", err.message);
-      }
+    /* ======================================================
+       SEND EMAILS (PARALLEL EXECUTION)
+    ====================================================== */
+
+    const customerMail = sendMail({
+      to: email,
+      subject: "Thank You for Your Feedback - Xpress Inn Marshall",
+      text: `Hello ${name}, thank you for contacting us!`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+          <h2 style="color:#e74c3c;">Hello ${name}!</h2>
+          <p>We have received your feedback:</p>
+          <blockquote style="background:#f8f9fa;padding:15px;border-left:4px solid #e74c3c;">
+            ${message}
+          </blockquote>
+          <p>Our team will review it shortly.</p>
+          <hr/>
+          <p style="font-size:14px;color:#666;">
+            Xpress Inn Marshall<br/>
+            300 I-20, Marshall, TX
+          </p>
+        </div>
+      `
     });
 
-    // Immediate response (DO NOT WAIT FOR EMAIL)
+    const businessMail = sendMail({
+      to: process.env.BUSINESS_EMAIL,
+      subject: `New Feedback from ${name}`,
+      text: `New feedback from ${name}`,
+      html: `
+        <h3>New Feedback Received</h3>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Contact:</strong> ${contact}</p>
+        <p><strong>Rating:</strong> ${rating ?? "N/A"}</p>
+        <p><strong>Type:</strong> ${feedbackType ?? "neutral"}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message}</p>
+        <hr/>
+        <small>${new Date().toLocaleString()}</small>
+      `
+    });
+
+    // Don't block response if email fails
+    Promise.all([customerMail, businessMail]).catch(err =>
+      console.error("Email sending issue:", err.message)
+    );
+
     return res.status(201).json({
       success: true,
       message: "Feedback submitted successfully",
@@ -73,17 +76,150 @@ exports.createFeedback = async (req, res) => {
 
   } catch (error) {
 
-    // Validation error
+    // Mongoose validation error
     if (error.name === "ValidationError") {
-      const msg = Object.values(error.errors)[0].message;
+      const errors = Object.values(error.errors).map(e => e.message);
       return res.status(400).json({
         success: false,
-        message: msg
+        message: errors[0]
       });
     }
 
-    console.error("Create Feedback Error:", error);
+    console.error("Create Feedback Error:", error.message);
 
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+/* ======================================================
+   ✅ GET ALL FEEDBACKS
+====================================================== */
+
+exports.getAllFeedbacks = async (req, res) => {
+  try {
+    const feedbacks = await Feedback.find()
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      count: feedbacks.length,
+      data: feedbacks
+    });
+
+  } catch (error) {
+    console.error("Get All Feedback Error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+/* ======================================================
+   ✅ GET FEEDBACK BY ID
+====================================================== */
+
+exports.getFeedbackById = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid feedback ID"
+      });
+    }
+
+    const feedback = await Feedback.findById(req.params.id).lean();
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: feedback
+    });
+
+  } catch (error) {
+    console.error("Get Feedback Error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+/* ======================================================
+   ✅ UPDATE FEEDBACK STATUS
+====================================================== */
+
+exports.updateFeedbackStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!["pending", "reviewed", "resolved"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value"
+      });
+    }
+
+    const feedback = await Feedback.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Feedback status updated",
+      data: feedback
+    });
+
+  } catch (error) {
+    console.error("Update Status Error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+/* ======================================================
+   ✅ DELETE FEEDBACK
+====================================================== */
+
+exports.deleteFeedback = async (req, res) => {
+  try {
+    const feedback = await Feedback.findByIdAndDelete(req.params.id);
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Feedback deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Delete Feedback Error:", error.message);
     return res.status(500).json({
       success: false,
       message: "Internal server error"

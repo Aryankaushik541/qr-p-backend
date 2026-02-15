@@ -3,13 +3,14 @@ const Feedback = require("../Models/feedback.Models");
 const { sendMail } = require("../utils/mailer");
 
 /* ======================================================
-   ✅ CREATE FEEDBACK (Optimized for Serverless)
+   ✅ CREATE FEEDBACK
 ====================================================== */
 
 exports.createFeedback = async (req, res) => {
   try {
     const { name, email, contact, message, rating, feedbackType } = req.body;
 
+    // Create feedback (schema handles validation)
     const feedback = await Feedback.create({
       name,
       email,
@@ -19,66 +20,63 @@ exports.createFeedback = async (req, res) => {
       feedbackType
     });
 
-    // ✅ SEND RESPONSE FIRST (NO DELAY)
-    res.status(201).json({
+    /* ======================================================
+       SEND EMAILS (PARALLEL EXECUTION)
+    ====================================================== */
+
+    const customerMail = sendMail({
+      to: email,
+      subject: "Thank You for Your Feedback - Xpress Inn Marshall",
+      text: `Hello ${name}, thank you for contacting us!`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+          <h2 style="color:#e74c3c;">Hello ${name}!</h2>
+          <p>We have received your feedback:</p>
+          <blockquote style="background:#f8f9fa;padding:15px;border-left:4px solid #e74c3c;">
+            ${message}
+          </blockquote>
+          <p>Our team will review it shortly.</p>
+          <hr/>
+          <p style="font-size:14px;color:#666;">
+            Xpress Inn Marshall<br/>
+            300 I-20, Marshall, TX
+          </p>
+        </div>
+      `
+    });
+
+    const businessMail = sendMail({
+      to: process.env.BUSINESS_EMAIL,
+      subject: `New Feedback from ${name}`,
+      text: `New feedback from ${name}`,
+      html: `
+        <h3>New Feedback Received</h3>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Contact:</strong> ${contact}</p>
+        <p><strong>Rating:</strong> ${rating ?? "N/A"}</p>
+        <p><strong>Type:</strong> ${feedbackType ?? "neutral"}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message}</p>
+        <hr/>
+        <small>${new Date().toLocaleString()}</small>
+      `
+    });
+
+    // Don't block response if email fails
+    Promise.all([customerMail, businessMail]).catch(err =>
+      console.error("Email sending issue:", err.message)
+    );
+
+    return res.status(201).json({
       success: true,
       message: "Feedback submitted successfully",
       data: feedback
     });
 
-    /* ======================================================
-       🚀 SEND EMAILS IN BACKGROUND (NON-BLOCKING)
-    ====================================================== */
-
-    setImmediate(async () => {
-      try {
-        await Promise.allSettled([
-          sendMail({
-            to: email,
-            subject: "Thank You for Your Feedback - Xpress Inn Marshall",
-            text: `Hello ${name}, thank you for contacting us!`,
-            html: `
-              <div style="font-family: Arial; max-width:600px; margin:auto;">
-                <h2 style="color:#e74c3c;">Hello ${name}!</h2>
-                <p>We have received your feedback:</p>
-                <blockquote style="background:#f8f9fa;padding:15px;border-left:4px solid #e74c3c;">
-                  ${message}
-                </blockquote>
-                <p>Our team will review it shortly.</p>
-                <hr/>
-                <p style="font-size:14px;color:#666;">
-                  Xpress Inn Marshall<br/>
-                  300 I-20, Marshall, TX
-                </p>
-              </div>
-            `
-          }),
-
-          sendMail({
-            to: process.env.BUSINESS_EMAIL,
-            subject: `New Feedback from ${name}`,
-            text: `New feedback from ${name}`,
-            html: `
-              <h3>New Feedback Received</h3>
-              <p><strong>Name:</strong> ${name}</p>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Contact:</strong> ${contact}</p>
-              <p><strong>Rating:</strong> ${rating ?? "N/A"}</p>
-              <p><strong>Type:</strong> ${feedbackType ?? "neutral"}</p>
-              <p><strong>Message:</strong></p>
-              <p>${message}</p>
-              <hr/>
-              <small>${new Date().toLocaleString()}</small>
-            `
-          })
-        ]);
-      } catch (err) {
-        console.error("Background email error:", err.message);
-      }
-    });
-
   } catch (error) {
 
+    // Mongoose validation error
     if (error.name === "ValidationError") {
       const errors = Object.values(error.errors).map(e => e.message);
       return res.status(400).json({
@@ -95,7 +93,6 @@ exports.createFeedback = async (req, res) => {
     });
   }
 };
-
 
 /* ======================================================
    ✅ GET ALL FEEDBACKS
@@ -121,7 +118,6 @@ exports.getAllFeedbacks = async (req, res) => {
     });
   }
 };
-
 
 /* ======================================================
    ✅ GET FEEDBACK BY ID
@@ -158,7 +154,6 @@ exports.getFeedbackById = async (req, res) => {
     });
   }
 };
-
 
 /* ======================================================
    ✅ UPDATE FEEDBACK STATUS
@@ -202,7 +197,6 @@ exports.updateFeedbackStatus = async (req, res) => {
     });
   }
 };
-
 
 /* ======================================================
    ✅ DELETE FEEDBACK

@@ -1,40 +1,25 @@
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
 const feedbackRoutes = require("./Routes/feedback.Routes");
 
 const app = express();
 
 /* ======================================================
-   ✅ ROBUST CORS CONFIG (NO 403 PRELIGHT)
+   ✅ HARD CORS FIX (MANUAL HEADERS)
 ====================================================== */
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://warm-donut.vercel.app"
-];
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-const corsOptions = {
-  origin: function (origin, callback) {
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
 
-    // Allow Postman / server-to-server
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    console.log("Blocked by CORS:", origin);
-    return callback(null, false); // DO NOT throw error
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-};
-
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // important
+  next();
+});
 
 /* ======================================================
    ✅ BODY PARSER
@@ -44,18 +29,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* ======================================================
-   ✅ TEST ROUTE
-====================================================== */
-
-app.get("/", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "🚀 Xpress Inn Feedback API Running"
-  });
-});
-
-/* ======================================================
-   ✅ SERVERLESS SAFE DATABASE CONNECTION
+   ✅ DATABASE CONNECTION (SERVERLESS SAFE)
 ====================================================== */
 
 let cached = global.mongoose;
@@ -68,9 +42,7 @@ async function connectDB() {
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
-    cached.promise = mongoose
-      .connect(process.env.MONGODB_URI)
-      .then((mongoose) => mongoose);
+    cached.promise = mongoose.connect(process.env.MONGODB_URI);
   }
 
   cached.conn = await cached.promise;
@@ -82,7 +54,7 @@ app.use(async (req, res, next) => {
     await connectDB();
     next();
   } catch (err) {
-    console.error("❌ DB Connection Error:", err.message);
+    console.error("DB Error:", err.message);
     res.status(500).json({
       success: false,
       message: "Database connection failed"
@@ -96,19 +68,12 @@ app.use(async (req, res, next) => {
 
 app.use("/api", feedbackRoutes);
 
-/* ======================================================
-   ✅ 404 HANDLER
-====================================================== */
-
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: "Route not found"
-  });
+app.get("/", (req, res) => {
+  res.json({ success: true, message: "API Running" });
 });
 
 /* ======================================================
-   ✅ EXPORT (VERCEL)
+   ✅ EXPORT (NO app.listen)
 ====================================================== */
 
 module.exports = app;

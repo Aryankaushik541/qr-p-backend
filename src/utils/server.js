@@ -1,36 +1,25 @@
 require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
-const feedbackRoutes = require("./Routes/feedback.Routes");
+const cors = require("cors");
+const feedbackRoutes = require("../Routes/feedback.Routes");
 
 const app = express();
 
 /* ======================================================
-   ✅ PROPER CORS (NOT *)
+   ✅ CORS (SAFE & CLEAN)
 ====================================================== */
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://warm-donut.vercel.app"
-];
-
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
-
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  next();
-});
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://warm-donut.vercel.app"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+  })
+);
 
 /* ======================================================
    ✅ BODY PARSER
@@ -54,7 +43,7 @@ async function connectDB() {
 
   if (!cached.promise) {
     cached.promise = mongoose.connect(process.env.MONGODB_URI, {
-      bufferCommands: false,
+      bufferCommands: false
     });
   }
 
@@ -86,7 +75,7 @@ app.get("/", (req, res) => {
 });
 
 /* ======================================================
-   ✅ EXPORT FOR VERCEL
+   ✅ EXPORT
 ====================================================== */
 
 module.exports = app;

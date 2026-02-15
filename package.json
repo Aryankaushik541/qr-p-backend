@@ -1,14 +1,12 @@
 {
   "name": "qr-p-backend",
   "version": "1.0.0",
-  "description": "Feedback API for Xpress Inn Marshall",
-  "main": "utils/server.js",
+  "description": "Feedback API",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node utils/server.js",
-    "dev": "nodemon utils/server.js"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
   },
-  "author": "Aryan Kaushik",
-  "license": "ISC",
   "type": "commonjs",
   "engines": {
     "node": "18.x"

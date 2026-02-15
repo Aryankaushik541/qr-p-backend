@@ -1,43 +1,56 @@
 const nodemailer = require("nodemailer");
 
 /* ======================================================
-   ✅ SEND MAIL FUNCTION (Fresh Connection Each Time)
+   ✅ CREATE TRANSPORTER (GMAIL - APP PASSWORD REQUIRED)
+====================================================== */
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // Gmail App Password
+  },
+});
+
+/* ======================================================
+   ✅ VERIFY TRANSPORTER (ONLY IN DEV)
+====================================================== */
+
+if (process.env.NODE_ENV !== "production") {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error("❌ Email configuration error:", error.message);
+    } else {
+      console.log("✅ Email server is ready to send messages");
+    }
+  });
+}
+
+/* ======================================================
+   ✅ SEND MAIL FUNCTION
 ====================================================== */
 
 exports.sendMail = async ({ to, subject, text, html }) => {
-  if (!to) throw new Error("Recipient email is required");
-
   try {
-    // ⚠️ Create transporter inside function (serverless safe)
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false, // STARTTLS
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      tls: {
-        rejectUnauthorized: false
-      },
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 20000
-    });
+    if (!to) {
+      throw new Error("Recipient email is required");
+    }
 
-    const info = await transporter.sendMail({
+    const mailOptions = {
       from: `"Xpress Inn Marshall" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,
-      html
-    });
+      html,
+    };
 
-    console.log("✅ Email sent:", info.response);
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("✅ Email sent:", info.messageId);
     return info;
 
   } catch (error) {
-    console.error("❌ Email sending failed:", error);
+    console.error("❌ Email sending failed:", error.message);
     throw error;
   }
 };

@@ -21,52 +21,59 @@ exports.createFeedback = async (req, res) => {
     });
 
     /* ======================================================
-       SEND EMAILS (PARALLEL EXECUTION)
+       SEND EMAILS (WITH PROPER AWAIT)
     ====================================================== */
 
-    const customerMail = sendMail({
-      to: email,
-      subject: "Thank You for Your Feedback - Xpress Inn Marshall",
-      text: `Hello ${name}, thank you for contacting us!`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
-          <h2 style="color:#e74c3c;">Hello ${name}!</h2>
-          <p>We have received your feedback:</p>
-          <blockquote style="background:#f8f9fa;padding:15px;border-left:4px solid #e74c3c;">
-            ${message}
-          </blockquote>
-          <p>Our team will review it shortly.</p>
+    // Send email to customer
+    try {
+      const customerMailResult = await sendMail({
+        to: email,
+        subject: "Thank You for Your Feedback - Xpress Inn Marshall",
+        text: `Hello ${name}, thank you for contacting us!`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+            <h2 style="color:#e74c3c;">Hello ${name}!</h2>
+            <p>We have received your feedback:</p>
+            <blockquote style="background:#f8f9fa;padding:15px;border-left:4px solid #e74c3c;">
+              ${message}
+            </blockquote>
+            <p>Our team will review it shortly.</p>
+            <hr/>
+            <p style="font-size:14px;color:#666;">
+              Xpress Inn Marshall<br/>
+              300 I-20, Marshall, TX
+            </p>
+          </div>
+        `
+      });
+      console.log("✅ Customer email sent:", customerMailResult.messageId);
+    } catch (emailError) {
+      console.error("❌ Customer email failed:", emailError.message);
+    }
+
+    // Send email to business
+    try {
+      const businessMailResult = await sendMail({
+        to: process.env.BUSINESS_EMAIL,
+        subject: `New Feedback from ${name}`,
+        text: `New feedback from ${name}`,
+        html: `
+          <h3>New Feedback Received</h3>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Contact:</strong> ${contact}</p>
+          <p><strong>Rating:</strong> ${rating ?? "N/A"}</p>
+          <p><strong>Type:</strong> ${feedbackType ?? "neutral"}</p>
+          <p><strong>Message:</strong></p>
+          <p>${message}</p>
           <hr/>
-          <p style="font-size:14px;color:#666;">
-            Xpress Inn Marshall<br/>
-            300 I-20, Marshall, TX
-          </p>
-        </div>
-      `
-    });
-
-    const businessMail = sendMail({
-      to: process.env.BUSINESS_EMAIL,
-      subject: `New Feedback from ${name}`,
-      text: `New feedback from ${name}`,
-      html: `
-        <h3>New Feedback Received</h3>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Contact:</strong> ${contact}</p>
-        <p><strong>Rating:</strong> ${rating ?? "N/A"}</p>
-        <p><strong>Type:</strong> ${feedbackType ?? "neutral"}</p>
-        <p><strong>Message:</strong></p>
-        <p>${message}</p>
-        <hr/>
-        <small>${new Date().toLocaleString()}</small>
-      `
-    });
-
-    // Don't block response if email fails
-    Promise.all([customerMail, businessMail]).catch(err =>
-      console.error("Email sending issue:", err.message)
-    );
+          <small>${new Date().toLocaleString()}</small>
+        `
+      });
+      console.log("✅ Business email sent:", businessMailResult.messageId);
+    } catch (emailError) {
+      console.error("❌ Business email failed:", emailError.message);
+    }
 
     return res.status(201).json({
       success: true,

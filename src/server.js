@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const feedbackRoutes = require("../Routes/feedback.Routes");
+const feedbackRoutes = require("./Routes/feedback.Routes");
 
 const app = express();
 
@@ -12,12 +12,29 @@ const app = express();
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://warm-donut.vercel.app"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
+    origin: function(origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      const allowedOrigins = [
+        "http://localhost:3000",
+        "https://warm-donut.vercel.app"
+      ];
+      
+      // Allow all origins in development (you can remove this in production)
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
 
@@ -116,6 +133,18 @@ app.get("/test-email", async (req, res) => {
       message: "Test email failed: " + error.message
     });
   }
+});
+
+/* ======================================================
+   ✅ ERROR HANDLING MIDDLEWARE
+====================================================== */
+
+app.use((err, req, res, next) => {
+  console.error("❌ Error:", err.message);
+  res.status(500).json({
+    success: false,
+    message: err.message || "Internal server error"
+  });
 });
 
 /* ======================================================

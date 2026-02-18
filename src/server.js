@@ -75,6 +75,50 @@ app.get("/", (req, res) => {
 });
 
 /* ======================================================
+   ✅ TEST EMAIL ENDPOINT
+====================================================== */
+
+app.get("/test-email", async (req, res) => {
+  try {
+    const { sendMail } = require("./utils/mailer");
+    
+    // Check if environment variables are set
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      return res.status(500).json({
+        success: false,
+        message: "Email configuration missing. Please check .env file."
+      });
+    }
+
+    // Send test email to the configured email address
+    const result = await sendMail({
+      to: process.env.EMAIL_USER,
+      subject: "Test Email - QR P Backend",
+      text: "This is a test email from your QR P Backend server.",
+      html: `
+        <h2>Test Email Successful! ✅</h2>
+        <p>Your email configuration is working correctly.</p>
+        <hr/>
+        <small>Sent from QR P Backend</small>
+      `
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Test email sent successfully!",
+      messageId: result.messageId
+    });
+
+  } catch (error) {
+    console.error("❌ Test email failed:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Test email failed: " + error.message
+    });
+  }
+});
+
+/* ======================================================
    ✅ EXPORT
 ====================================================== */
 

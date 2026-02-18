@@ -24,8 +24,11 @@ exports.createFeedback = async (req, res) => {
        SEND EMAILS (WITH PROPER AWAIT)
     ====================================================== */
 
+    console.log("📧 Starting email sending process...");
+
     // Send email to customer
     try {
+      console.log("📧 Sending email to customer:", email);
       const customerMailResult = await sendMail({
         to: email,
         subject: "Thank You for Your Feedback - Xpress Inn Marshall",
@@ -46,34 +49,42 @@ exports.createFeedback = async (req, res) => {
           </div>
         `
       });
-      console.log("✅ Customer email sent:", customerMailResult.messageId);
+      console.log("✅ Customer email sent successfully!");
     } catch (emailError) {
       console.error("❌ Customer email failed:", emailError.message);
     }
 
     // Send email to business
     try {
-      const businessMailResult = await sendMail({
-        to: process.env.BUSINESS_EMAIL,
-        subject: `New Feedback from ${name}`,
-        text: `New feedback from ${name}`,
-        html: `
-          <h3>New Feedback Received</h3>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Contact:</strong> ${contact}</p>
-          <p><strong>Rating:</strong> ${rating ?? "N/A"}</p>
-          <p><strong>Type:</strong> ${feedbackType ?? "neutral"}</p>
-          <p><strong>Message:</strong></p>
-          <p>${message}</p>
-          <hr/>
-          <small>${new Date().toLocaleString()}</small>
-        `
-      });
-      console.log("✅ Business email sent:", businessMailResult.messageId);
+      const businessEmail = process.env.BUSINESS_EMAIL;
+      if (!businessEmail) {
+        console.warn("⚠️ BUSINESS_EMAIL not set in .env file");
+      } else {
+        console.log("📧 Sending email to business:", businessEmail);
+        const businessMailResult = await sendMail({
+          to: businessEmail,
+          subject: `New Feedback from ${name}`,
+          text: `New feedback from ${name}`,
+          html: `
+            <h3>New Feedback Received</h3>
+            <p><strong>Name:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Contact:</strong> ${contact}</p>
+            <p><strong>Rating:</strong> ${rating ?? "N/A"}</p>
+            <p><strong>Type:</strong> ${feedbackType ?? "neutral"}</p>
+            <p><strong>Message:</strong></p>
+            <p>${message}</p>
+            <hr/>
+            <small>${new Date().toLocaleString()}</small>
+          `
+        });
+        console.log("✅ Business email sent successfully!");
+      }
     } catch (emailError) {
       console.error("❌ Business email failed:", emailError.message);
     }
+
+    console.log("📧 Email sending process completed");
 
     return res.status(201).json({
       success: true,
